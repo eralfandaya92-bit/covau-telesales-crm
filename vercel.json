@@ -1,5 +1,10 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/presentation-v2.html" }
+  "cleanUrls": false,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/presentation-v2.html",
+      "permanent": false
+    }
   ]
 }
