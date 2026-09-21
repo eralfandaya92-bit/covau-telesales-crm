@@ -1,6 +1,6 @@
 let assignmentTeamLeads=[],assignmentRoster=[];
 function assignmentLeader(){return !!profile&&['team_leader','manager','admin'].includes(profile.role)}
-async function countLeads(builder){const {count,error}=await builder.select('id',{count:'exact',head:true});if(error)throw error;return count||0}
+async function countLeads(filters=[]){let q=sb.from('leads').select('id',{count:'exact',head:true});for(const f of filters){if(f[0]==='eq')q=q.eq(f[1],f[2]);else if(f[0]==='is')q=q.is(f[1],f[2]);}const {count,error}=await q;if(error)throw error;return count||0}
 async function loadAssignmentManager(){
  if(!assignmentLeader())return;
  byId('assignmentRolePill').textContent=String(profile.role).replace('_',' ').toUpperCase();
@@ -12,10 +12,10 @@ async function loadAssignmentManager(){
   ]);
   if(te||re)throw(te||re); assignmentTeamLeads=tls||[]; assignmentRoster=roster||[];
   const [total,unassigned,reassign,agentAssigned]=await Promise.all([
-   countLeads(sb.from('leads')),
-   countLeads(sb.from('leads').eq('assignment_status','unassigned').is('agent_name',null)),
-   countLeads(sb.from('leads').eq('assignment_status','reassignment_required')),
-   countLeads(sb.from('leads').eq('assignment_status','agent_assigned'))
+   countLeads(),
+   countLeads([['eq','assignment_status','unassigned'],['is','agent_name',null]]),
+   countLeads([['eq','assignment_status','reassignment_required']]),
+   countLeads([['eq','assignment_status','agent_assigned']])
   ]);
   byId('assignmentKpis').innerHTML=[
    ['Total CRM Leads',total,'Current database'],
@@ -50,7 +50,7 @@ function renderAssignmentSelectors(){
 async function renderAssignmentSummary(total){
  const parts=[];
  for(const t of assignmentTeamLeads.filter(x=>x.status==='active')){
-  const c=await countLeads(sb.from('leads').eq('assigned_tl_name',t.tl_name)); parts.push([t.tl_name,c]);
+  const c=await countLeads([['eq','assigned_tl_name',t.tl_name]]); parts.push([t.tl_name,c]);
  }
  const assigned=parts.reduce((s,x)=>s+x[1],0);
  byId('assignmentSummary').innerHTML='<div class="data-summary" style="grid-template-columns:repeat(2,1fr)">'+parts.map(x=>'<div class="data-stat"><span>'+esc(x[0])+'</span><b>'+Number(x[1]).toLocaleString()+'</b></div>').join('')+'<div class="data-stat"><span>Total TL Assigned</span><b>'+assigned.toLocaleString()+'</b></div><div class="data-stat"><span>Coverage</span><b>'+(total?((assigned/total)*100).toFixed(1):'0.0')+'%</b></div></div>';
