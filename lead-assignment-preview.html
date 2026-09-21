@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Covau CRM · Lead Assignment Manager</title>
+<link rel="stylesheet" href="/app.css">
+<style>
+:root{--teal:#1ca3a3;--soft:#eef5fa;--shadow:0 8px 28px rgba(15,47,85,.08)}
+.assignment-page .content{padding:18px 22px 30px}.assignment-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.assignment-top h1{margin:0;color:var(--navy);font-size:30px}.assignment-top p{margin:4px 0 0;color:var(--muted)}
+.ready-pill{background:#daf6e7;color:#147044;border:1px solid #b7e9cc;padding:8px 12px;border-radius:999px;font-weight:900;font-size:12px}
+.assign-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.assign-kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.assign-kpi .big{font-size:25px;font-weight:900;color:var(--navy);margin-top:5px}.assign-kpi .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.two{display:grid;grid-template-columns:1.2fr .9fr;gap:14px}.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:14px}
+.panel-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.panel-h h3{margin:0;color:var(--navy);font-size:16px}
+.panel-b{padding:14px 16px}.tl-row{display:grid;grid-template-columns:1.2fr .55fr .8fr .9fr;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #edf1f4}
+.tl-row:last-child{border-bottom:0}.person{display:flex;gap:10px;align-items:center}.avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e6f0fb;color:#155dac;font-weight:900}.avatar.green{background:#e4f5e9;color:#168454}.avatar.gray{background:#eef1f4;color:#718092}
+.status{font-size:11px;font-weight:800}.status.active{color:#168454}.status.inactive{color:#8090a0}.qty{width:100%;border:1px solid #cad7e1;border-radius:8px;padding:9px}
+.mode{width:100%;border:1px solid #cad7e1;border-radius:8px;padding:9px;background:#fff}.assign-foot{display:flex;align-items:center;gap:10px;margin-top:12px}.assign-foot .spacer{flex:1}
+.donut{width:190px;height:190px;border-radius:50%;background:conic-gradient(#1768c5 0 46%,#1aa35e 46% 92%,#d9e2ea 92% 100%);margin:2px auto 14px;position:relative}
+.donut:after{content:"";position:absolute;inset:35px;background:#fff;border-radius:50%}.donut-center{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;font-weight:900;color:var(--navy);font-size:22px}.donut-center span{font-size:11px;color:var(--muted);display:block;font-weight:700}
+.legend{display:grid;gap:9px}.legend-row{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:12px}.dot{width:10px;height:10px;border-radius:50%;background:#1768c5}.dot.green{background:#1aa35e}.dot.gray{background:#c9d4dd}
+.tabs2{display:flex;gap:7px;margin-bottom:12px}.tab2{border:1px solid #c9d6e1;background:#fff;padding:8px 13px;border-radius:8px;color:var(--navy);font-weight:900;cursor:pointer}.tab2.active{background:#1768c5;color:#fff;border-color:#1768c5}
+.agent-table{width:100%;border-collapse:collapse}.agent-table th{font-size:11px}.agent-table input{width:90px;border:1px solid #cad7e1;border-radius:6px;padding:7px}.agent-table td{font-size:12px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.filters select,.filters input{border:1px solid #cad7e1;border-radius:7px;padding:8px;background:#fff}.filters input{min-width:210px}
+.priority{display:inline-block;min-width:28px;text-align:center;border-radius:999px;padding:3px 7px;font-weight:900;font-size:11px}.pa{background:#ffd8d8;color:#a12e2e}.pb{background:#fff0ae;color:#836515}.pc{background:#d9f3e4;color:#23704a}
+.mini-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}.mini-bar{padding:10px;border-radius:9px;background:#f7fafc;border:1px solid #e4eaf0;text-align:center}.mini-bar b{display:block;font-size:18px;color:var(--navy)}
+.toast{position:fixed;right:20px;bottom:20px;background:#12395f;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.18);display:none;z-index:100}
+@media(max-width:1100px){.assign-kpis{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.tl-row{grid-template-columns:1fr 1fr}.three{grid-template-columns:1fr}.assignment-page .content{padding:14px}}
+</style></head>
+<body>
+<div class="shell assignment-page">
+<aside class="sidebar">
+  <div class="brand">COVAU TELESALES CRM<small>Lead Operations Preview</small></div>
+  <div class="nav">
+    <button onclick="location.href='/'">Dashboard</button>
+    <button onclick="location.href='/'">Lead Pipeline</button>
+    <button class="active">Lead Assignment</button>
+    <button onclick="location.href='/'">Agents</button>
+    <button onclick="location.href='/'">Follow-ups</button>
+    <button onclick="location.href='/'">Opportunities</button>
+    <button onclick="location.href='/'">Lead Recycling</button>
+    <button onclick="location.href='/'">Reports</button>
+  </div>
+  <div class="sidefoot"><b>Preview Mode</b><div style="opacity:.7;margin-top:4px">No production records are changed.</div></div>
+</aside>
+<main class="main">
+<div class="top"><strong>Lead Assignment Manager</strong><div class="top-actions"><span class="pill">Management Preview</span><button class="btn" onclick="location.href='/'">Back to CRM</button></div></div>
+<div class="content">
+<div class="assignment-top"><div><h1>Lead Assignment Manager</h1><p>Allocate callable leads to Team Leads, then distribute them to agents in seconds.</p></div><div class="ready-pill">● Ready for Distribution</div></div>
+
+<div class="assign-kpis">
+  <div class="assign-kpi"><div class="muted">TOTAL CALLABLE LEADS</div><div class="big" id="kTotal">39,210</div><div class="sub">Post-clean pool</div></div>
+  <div class="assign-kpi"><div class="muted">ACTIVE TEAM LEADS</div><div class="big">2</div><div class="sub">3 planned</div></div>
+  <div class="assign-kpi"><div class="muted">ACTIVE AGENTS</div><div class="big">12</div><div class="sub">Across Vince & Louisse</div></div>
+  <div class="assign-kpi"><div class="muted">ASSIGNED LEADS</div><div class="big" id="kAssigned">0</div><div class="sub" id="kAssignedPct">0% allocated</div></div>
+  <div class="assign-kpi"><div class="muted">UNASSIGNED LEADS</div><div class="big" id="kUnassigned">39,210</div><div class="sub" id="kUnassignedPct">100% remaining</div></div>
+</div>
+
+<div class="two">
+  <div class="panel">
+    <div class="panel-h"><h3>1. Assign Leads to Team Leads</h3><span class="muted">Set a quota or use auto-balanced allocation</span></div>
+    <div class="panel-b">
+      <div class="tl-row" style="font-size:11px;font-weight:900;color:var(--muted)"><div>TEAM LEAD</div><div>STATUS</div><div>TARGET LEADS</div><div>METHOD</div></div>
+      <div class="tl-row">
+        <div class="person"><div class="avatar">VV</div><div><b>TL Vince</b><div class="muted">Team Lead</div></div></div>
+        <div class="status active">● Active</div>
+        <input id="vinceTarget" class="qty" type="number" min="0" value="4500">
+        <select class="mode"><option>Auto (Balanced)</option><option>Priority A First</option><option>Manual Quota</option></select>
+      </div>
+      <div class="tl-row">
+        <div class="person"><div class="avatar green">LL</div><div><b>TL Louisse</b><div class="muted">Team Lead</div></div></div>
+        <div class="status active">● Active</div>
+        <input id="louisseTarget" class="qty" type="number" min="0" value="4500">
+        <select class="mode"><option>Auto (Balanced)</option><option>Priority A First</option><option>Manual Quota</option></select>
+      </div>
+      <div class="tl-row">
+        <div class="person"><div class="avatar gray">T3</div><div><b>TL 3</b><div class="muted">Future Team Lead</div></div></div>
+        <div class="status inactive">● Not Active</div>
+        <input class="qty" type="number" value="0" disabled>
+        <select class="mode" disabled><option>Auto (Balanced)</option></select>
+      </div>
+      <div class="assign-foot">
+        <b>Total to assign:</b><input id="totalAssign" class="qty" style="width:110px" readonly value="9000"><span class="muted">of 39,210 callable leads</span>
+        <div class="spacer"></div><button class="btn primary" id="distributeBtn">Distribute to Team Leads</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h3>Assignment Summary</h3><span class="pill">Live preview</span></div>
+    <div class="panel-b">
+      <div class="donut" id="donut"><div class="donut-center"><div><span id="donutNum">0</span><span>assigned</span></div></div></div>
+      <div class="legend">
+        <div class="legend-row"><i class="dot"></i><span>Assigned to TL Vince</span><b id="vinceSum">0</b></div>
+        <div class="legend-row"><i class="dot green"></i><span>Assigned to TL Louisse</span><b id="louisseSum">0</b></div>
+        <div class="legend-row"><i class="dot gray"></i><span>Assigned to TL 3</span><b>0</b></div>
+        <div class="legend-row"><i class="dot gray"></i><span>Unassigned</span><b id="unassignedSum">39,210</b></div>
+      </div>
+      <div class="mini-bars">
+        <div class="mini-bar"><span class="muted">Priority A</span><b>17,655</b></div>
+        <div class="mini-bar"><span class="muted">Priority B</span><b>21,555</b></div>
+        <div class="mini-bar"><span class="muted">Needs Phone</span><b>6,512</b></div>
+        <div class="mini-bar"><span class="muted">Excluded</span><b>293</b></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="two">
+  <div class="panel">
+    <div class="panel-h"><h3>2. Agent Distribution (Per Team Lead)</h3><span class="muted">Each TL owns their assigned batch</span></div>
+    <div class="panel-b">
+      <div class="tabs2"><button class="tab2 active" data-tl="Vince">TL Vince</button><button class="tab2" data-tl="Louisse">TL Louisse</button><button class="tab2" disabled>TL 3</button></div>
+      <div id="teamCaption" class="muted" style="margin-bottom:8px">TL Vince · target 4,500 leads</div>
+      <table class="agent-table"><thead><tr><th>Agent</th><th>Status</th><th>Target</th><th>Assigned</th><th>Remaining</th></tr></thead><tbody id="agentBody"></tbody></table>
+      <div class="assign-foot"><span class="muted" id="agentFoot">Set quotas, then assign.</span><div class="spacer"></div><button class="btn good" id="agentAssignBtn">Assign to Agents</button></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h3>Lead Preview</h3><span class="muted">Sample of leads matching current allocation</span></div>
+    <div class="panel-b">
+      <div class="filters"><select><option>All Priorities</option><option>A</option><option>B</option></select><select><option>All States</option><option>NSW</option><option>VIC</option><option>QLD</option><option>SA</option></select><select><option>All Industries</option><option>Manufacturing</option><option>Restaurant & Food Service</option><option>Automotive Repair</option></select><input placeholder="Search business, suburb..."></div>
+      <div class="table-wrap" style="max-height:360px"><table><thead><tr><th>#</th><th>Business</th><th>Industry</th><th>Suburb</th><th>State</th><th>Priority</th><th>Assigned TL</th></tr></thead><tbody id="leadPreview"></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div></main></div>
+<div class="toast" id="toast"></div>
+<script>
+const TOTAL=39210;
+const teams={
+  Vince:["John Miguel Salvador","Federico Geromo","Jose Gabriel Mercado","Mark Louie Aquino","Renan Adorza","Agent 6"],
+  Louisse:["Jesus Oliver Mauricio","Vida Rae Masangkay","Franscidela Bronsal","Xtro Gem Ruiz","Jireco Aceberos","Agent 12"]
+};
+let currentTL="Vince", allocations={Vince:0,Louisse:0}, agentAlloc={};
+const fmt=n=>Number(n||0).toLocaleString();
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
+function targets(){const v=Math.max(0,+vinceTarget.value||0),l=Math.max(0,+louisseTarget.value||0);totalAssign.value=v+l;return{v,l}}
+vinceTarget.oninput=louisseTarget.oninput=targets;
+function updateSummary(){
+ const a=allocations.Vince+allocations.Louisse,u=Math.max(0,TOTAL-a),pct=Math.round(a/TOTAL*100);
+ kAssigned.textContent=fmt(a);kUnassigned.textContent=fmt(u);kAssignedPct.textContent=pct+"% allocated";kUnassignedPct.textContent=(100-pct)+"% remaining";
+ vinceSum.textContent=fmt(allocations.Vince);louisseSum.textContent=fmt(allocations.Louisse);unassignedSum.textContent=fmt(u);donutNum.textContent=fmt(a);
+ const vp=TOTAL?allocations.Vince/TOTAL*100:0,lp=TOTAL?allocations.Louisse/TOTAL*100:0;
+ donut.style.background="conic-gradient(#1768c5 0 "+vp+"%,#1aa35e "+vp+"% "+(vp+lp)+"%,#d9e2ea "+(vp+lp)+"% 100%)";
+}
+distributeBtn.onclick=()=>{const {v,l}=targets();if(v+l>TOTAL){toast("Target exceeds callable lead pool.");return}allocations.Vince=v;allocations.Louisse=l;updateSummary();renderAgents();renderLeads();toast("Lead quotas assigned to TL Vince and TL Louisse.");};
+function renderAgents(){
+ const target=allocations[currentTL]||targets()[currentTL==="Vince"?"v":"l"],names=teams[currentTL],base=Math.floor(target/names.length),extra=target%names.length;
+ agentBody.innerHTML=names.map((n,i)=>{const q=(agentAlloc[currentTL]?.[i]??(base+(i<extra?1:0)));return '<tr><td><b>'+n+'</b></td><td><span class="status active">● Active</span></td><td><input class="agent-q" data-i="'+i+'" value="'+q+'" type="number" min="0"></td><td>'+fmt(agentAlloc[currentTL]?.assigned?.[i]||0)+'</td><td>'+fmt(Math.max(0,q-(agentAlloc[currentTL]?.assigned?.[i]||0)))+'</td></tr>'}).join("");
+ teamCaption.textContent="TL "+currentTL+" · target "+fmt(target)+" leads";
+ agentFoot.textContent=names.length+" active agents under TL "+currentTL;
+}
+document.querySelectorAll(".tab2[data-tl]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab2[data-tl]").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentTL=b.dataset.tl;renderAgents()});
+agentAssignBtn.onclick=()=>{const qs=[...document.querySelectorAll(".agent-q")].map(x=>Math.max(0,+x.value||0)),sum=qs.reduce((a,b)=>a+b,0),cap=allocations[currentTL]||0;if(sum>cap&&cap){toast("Agent quotas exceed this TL allocation.");return}agentAlloc[currentTL]={...qs,assigned:[...qs]};renderAgents();toast("Assigned "+fmt(sum)+" leads across "+qs.length+" agents.");};
+const sample=[
+["Sydney Metal Works","Metal Fabrication","Smithfield","NSW","A"],["Cafe Prime","Cafe & Coffee","Burwood","NSW","A"],["Eastside Pharmacy","Pharmacy","Parramatta","NSW","B"],["Rapid Auto Repairs","Automotive Repair","Blacktown","NSW","B"],["Fresh Mart Grocery","Grocery & Supermarket","Liverpool","NSW","A"],["Coastal Constructions","Construction & Building","Central Coast","NSW","B"],["Elite Car Wash","Car Wash","Penrith","NSW","A"],["Baker's Delight","Bakery","Hornsby","NSW","A"],["Traralgon Dental Care","Dental","Traralgon","VIC","B"],["ColdChain Logistics","Cold Storage & Refrigeration","Dandenong","VIC","A"]
+];
+function renderLeads(){leadPreview.innerHTML=sample.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td><span class="priority p'+r[4].toLowerCase()+'">'+r[4]+'</span></td><td>'+(i%2?"TL Louisse":"TL Vince")+'</td></tr>').join("")}
+targets();updateSummary();renderAgents();renderLeads();
+</script></body></html>
