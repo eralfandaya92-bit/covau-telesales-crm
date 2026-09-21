@@ -6,17 +6,12 @@ async function loadAssignmentManager(){
  byId('assignmentRolePill').textContent=String(profile.role).replace('_',' ').toUpperCase();
  byId('assignmentMsg').textContent='Loading assignment data...';
  try{
-  const [{data:tls,error:te},{data:roster,error:re}]=await Promise.all([
-   sb.from('crm_team_leads').select('*').order('status').order('tl_name'),
-   sb.from('agent_roster').select('*').order('agent_name')
-  ]);
-  if(te||re)throw(te||re); assignmentTeamLeads=tls||[]; assignmentRoster=roster||[];
-  const [total,unassigned,reassign,agentAssigned]=await Promise.all([
-   countLeads(),
-   countLeads([['eq','assignment_status','unassigned'],['is','agent_name',null]]),
-   countLeads([['eq','assignment_status','reassignment_required']]),
-   countLeads([['eq','assignment_status','agent_assigned']])
-  ]);
+  const {data,error}=await sb.rpc('lead_assignment_dashboard');
+  if(error)throw error;
+  const d=data||{};
+  assignmentTeamLeads=d.team_leads||[];
+  assignmentRoster=d.roster||[];
+  const total=Number(d.total||0),unassigned=Number(d.unassigned||0),reassign=Number(d.reassignment||0),agentAssigned=Number(d.agent_assigned||0);
   byId('assignmentKpis').innerHTML=[
    ['Total CRM Leads',total,'Current database'],
    ['Unassigned',unassigned,'Available for TL allocation'],
@@ -24,9 +19,17 @@ async function loadAssignmentManager(){
    ['Reassignment Queue',reassign,reassign?'Needs attention':'Queue is clear'],
    ['Active Team Leads',assignmentTeamLeads.filter(x=>x.status==='active').length,'Future TL supported']
   ].map(x=>'<div class="kpi primary-kpi"><div class="label">'+x[0]+'</div><div class="value">'+Number(x[1]).toLocaleString()+'</div><div class="delta">'+x[2]+'</div></div>').join('');
-  renderTlRows(); renderAssignmentSelectors(); await renderAssignmentSummary(total); await loadAssignmentHistory();
+  renderTlRows(); renderAssignmentSelectors();
+  const parts=d.tl_counts||[],assigned=parts.reduce((s,x)=>s+Number(x.count||0),0);
+  byId('assignmentSummary').innerHTML='<div class="data-summary" style="grid-template-columns:repeat(2,1fr)">'+parts.map(x=>'<div class="data-stat"><span>'+esc(x.tl_name)+'</span><b>'+Number(x.count||0).toLocaleString()+'</b></div>').join('')+'<div class="data-stat"><span>Total TL Assigned</span><b>'+assigned.toLocaleString()+'</b></div><div class="data-stat"><span>Coverage</span><b>'+(total?((assigned/total)*100).toFixed(1):'0.0')+'%</b></div></div>';
+  const hist=d.history||[];
+  byId('assignmentHistoryBody').innerHTML=hist.map(r=>'<tr><td>'+fmtDate(r.assigned_at)+'</td><td><b>'+esc(r.lead_id||'')+'</b><br><span class="muted">'+esc(r.business_name||'')+'</span></td><td>'+esc(r.previous_tl_name||'—')+'</td><td>'+esc(r.new_tl_name||'—')+'</td><td>'+esc(r.previous_agent_name||'—')+'</td><td>'+esc(r.new_agent_name||'—')+'</td><td>'+esc(r.reason||'')+'</td></tr>').join('')||'<tr><td colspan="7">No assignment changes yet.</td></tr>';
   byId('assignmentMsg').textContent='';
- }catch(e){byId('assignmentMsg').textContent='Could not load assignment manager: '+e.message}
+ }catch(e){
+  const msg=e?.message||e?.details||e?.hint||String(e||'Unknown error');
+  byId('assignmentMsg').textContent='Could not load assignment manager: '+msg;
+  console.error('Assignment manager load failed',e);
+ }
 }
 function renderTlRows(){
  const active=assignmentTeamLeads.filter(x=>x.status!=='inactive');
@@ -47,14 +50,6 @@ function renderAssignmentSelectors(){
  const opts=activeAgents.map(a=>'<option value="'+esc(a.agent_name)+'" data-email="'+esc(a.agent_email||'')+'">'+esc(a.agent_name)+(a.team_lead_name?' · '+esc(a.team_lead_name):'')+'</option>').join('');
  byId('agentAssignAgent').innerHTML=opts;byId('offboardAgent').innerHTML=opts;
 }
-async function renderAssignmentSummary(total){
- const parts=[];
- for(const t of assignmentTeamLeads.filter(x=>x.status==='active')){
-  const c=await countLeads([['eq','assigned_tl_name',t.tl_name]]); parts.push([t.tl_name,c]);
- }
- const assigned=parts.reduce((s,x)=>s+x[1],0);
- byId('assignmentSummary').innerHTML='<div class="data-summary" style="grid-template-columns:repeat(2,1fr)">'+parts.map(x=>'<div class="data-stat"><span>'+esc(x[0])+'</span><b>'+Number(x[1]).toLocaleString()+'</b></div>').join('')+'<div class="data-stat"><span>Total TL Assigned</span><b>'+assigned.toLocaleString()+'</b></div><div class="data-stat"><span>Coverage</span><b>'+(total?((assigned/total)*100).toFixed(1):'0.0')+'%</b></div></div>';
-}
 byId('refreshAssignmentBtn').onclick=loadAssignmentManager;
 byId('assignAgentBtn').onclick=async()=>{
  const tl=byId('agentAssignTl').value,sel=byId('agentAssignAgent'),agent=sel.value,count=Number(byId('agentAssignCount').value||0),email=sel.selectedOptions[0]?.dataset.email||null;
@@ -69,10 +64,3 @@ byId('offboardBtn').onclick=async()=>{
  const {data,error}=await sb.rpc('offboard_agent',{p_agent_name:agent,p_reason:reason});
  if(error){byId('offboardMsg').textContent=error.message;return}byId('offboardMsg').textContent=Number(data||0).toLocaleString()+' open leads moved to reassignment queue.';await loadAssignmentManager();
 };
-async function loadAssignmentHistory(){
- const {data,error}=await sb.from('lead_assignment_history').select('assigned_at,lead_id,previous_tl_name,new_tl_name,previous_agent_name,new_agent_name,reason').order('assigned_at',{ascending:false}).limit(50);
- if(error){byId('assignmentHistoryBody').innerHTML='<tr><td colspan="7">'+esc(error.message)+'</td></tr>';return}
- const ids=[...new Set((data||[]).map(x=>x.lead_id))],map={};
- if(ids.length){const {data:ls}=await sb.from('leads').select('id,lead_id,business_name').in('id',ids);(ls||[]).forEach(x=>map[x.id]=x)}
- byId('assignmentHistoryBody').innerHTML=(data||[]).map(r=>{const l=map[r.lead_id]||{};return '<tr><td>'+fmtDate(r.assigned_at)+'</td><td><b>'+esc(l.lead_id||'')+'</b><br><span class="muted">'+esc(l.business_name||'')+'</span></td><td>'+esc(r.previous_tl_name||'—')+'</td><td>'+esc(r.new_tl_name||'—')+'</td><td>'+esc(r.previous_agent_name||'—')+'</td><td>'+esc(r.new_agent_name||'—')+'</td><td>'+esc(r.reason||'')+'</td></tr>'}).join('')||'<tr><td colspan="7">No assignment changes yet.</td></tr>';
-}
