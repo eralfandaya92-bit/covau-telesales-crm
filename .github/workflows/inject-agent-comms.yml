@@ -1,0 +1,36 @@
+name: Inject agent communications demo
+on:
+  push:
+    branches: [ob-sales-crm-prototype-v1]
+    paths:
+      - 'agent-workspace/comms.js'
+      - '.github/workflows/inject-agent-comms.yml'
+permissions:
+  contents: write
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ob-sales-crm-prototype-v1
+      - name: Add communications module to workspace
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('agent-workspace/index.html')
+          s=p.read_text()
+          tag='<script src="./comms.js"></script>'
+          if tag not in s:
+              s=s.replace('</body>', tag+'</body>')
+              p.write_text(s)
+          PY
+      - name: Commit update
+        run: |
+          git config user.name "covau-demo-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add agent-workspace/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Load SMS and email communications workspace"
+            git push origin HEAD:ob-sales-crm-prototype-v1
+          fi
