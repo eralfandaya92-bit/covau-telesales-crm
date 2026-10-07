@@ -13,7 +13,7 @@ async function flareRefreshAuthUI(){
   const {data:profile}=await flareDb.from('profiles').select('full_name,role,active,approval_status').eq('id',session.user.id).maybeSingle();
   panel.innerHTML='<b>Flare Session</b><div style="margin:7px 0">'+(profile?.full_name||session.user.email)+'<br><span style="color:#718196">'+(profile?.role||'user')+' · '+(profile?.approval_status||'profile pending')+'</span></div><button onclick="flareSignOut()">Sign Out</button>';
  }else{
-  panel.innerHTML='<b>Sign in to Flare</b><div style="margin:8px 0"><input id="flareEmail" type="email" placeholder="CRM email" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px"><input id="flarePassword" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:8px"></div><button class="primary" onclick="flareSignIn()">Sign In</button><div id="flareAuthMsg" style="margin-top:7px;color:#718196"></div>';
+  panel.innerHTML='<b>Sign in to Flare</b><div style="margin:8px 0"><input id="flareEmail" type="email" placeholder="CRM email" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px"><input id="flarePassword" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:8px"></div><button class="primary" onclick="flareSignIn()">Sign In</button> <button onclick="flareSendMagicLink()">Email me a sign-in link</button><div id="flareAuthMsg" style="margin-top:7px;color:#718196"></div>';
  }
  document.body.appendChild(panel);
 }
@@ -31,3 +31,12 @@ async function flareSignIn(){
 }
 async function flareSignOut(){if(flareDb)await flareDb.auth.signOut();await flareRefreshAuthUI()}
 window.addEventListener('load',()=>setTimeout(flareRefreshAuthUI,700));
+
+async function flareSendMagicLink(){
+ const email=document.querySelector('#flareEmail')?.value.trim(),msg=document.querySelector('#flareAuthMsg');
+ if(!email){if(msg)msg.textContent='Enter your Flare email first.';return}
+ if(msg)msg.textContent='Sending secure sign-in link...';
+ const {error}=await flareDb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname,shouldCreateUser:false}});
+ if(error){if(msg)msg.textContent=error.message;return}
+ if(msg)msg.textContent='Check your email for the Flare sign-in link.';
+}
