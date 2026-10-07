@@ -2,3 +2,32 @@ const views={command:`<div class="hero"><h2>Your lead operation at a glance</h2>
 const FLARE_SUPABASE_URL='https://prhnonjiylcujziibaxh.supabase.co';const FLARE_PUBLISHABLE_KEY='sb_publishable_dlsD991fAzIUkQf7L1WwNw_oBf2Dtv4';const flareDb=window.supabase?window.supabase.createClient(FLARE_SUPABASE_URL,FLARE_PUBLISHABLE_KEY):null;let flareIntakeRows=[];let flareIntakeFilename='';async function previewLeadFile(file){const out=document.querySelector('#intakeResult');if(!file||!out)return;flareIntakeFilename=file.name;out.innerHTML='<div class="card">Reading '+file.name+'...</div>';try{const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];flareIntakeRows=XLSX.utils.sheet_to_json(ws,{defval:''});if(!flareIntakeRows.length)throw new Error('No data rows found.');const cols=Object.keys(flareIntakeRows[0]);out.innerHTML='<div class="action"><i class="dot" style="background:#18a56a"></i><div><b>'+flareIntakeRows.length.toLocaleString()+' rows ready for validation preview</b><small>'+cols.slice(0,8).join(' · ')+'</small></div><span class="status">FILE READ</span></div><button class="primary" style="margin-top:12px" onclick="validateIntake()">Validate Batch</button><p style="font-size:11px;color:#718196">Validation is authenticated. No lead becomes dial-ready from this step.</p>';}catch(e){out.innerHTML='<div class="action"><i class="dot" style="background:#e65353"></i><div><b>Could not read file</b><small>'+e.message+'</small></div></div>'}}async function validateIntake(){const out=document.querySelector('#intakeResult');if(!flareDb||!flareIntakeRows.length)return;const {data:{session}}=await flareDb.auth.getSession();if(!session){out.innerHTML+='<div class="action"><i class="dot" style="background:#f0a51a"></i><div><b>Sign-in required</b><small>The live intake backend requires an approved Flare CRM session before validation.</small></div><span class="badge">AUTH</span></div>';return}out.innerHTML+='<p>Validating securely...</p>';try{const r=await fetch(FLARE_SUPABASE_URL+'/functions/v1/flare-lead-intake',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':FLARE_PUBLISHABLE_KEY},body:JSON.stringify({filename:flareIntakeFilename,rows:flareIntakeRows})});const x=await r.json();out.innerHTML+='<div class="action"><i class="dot" style="background:'+(r.ok?'#18a56a':'#e65353')+'"></i><div><b>'+(r.ok?'Backend validation reached':'Validation blocked')+'</b><small>'+(x.message||x.error||'Unknown response')+'</small></div><span class="status">'+(r.ok?'CONNECTED':'REVIEW')+'</span></div>'}catch(e){out.innerHTML+='<p class="bad">'+e.message+'</p>'}}
 async function loadFlareInventoryMetrics(){if(!flareDb)return;const {data:{session}}=await flareDb.auth.getSession();if(!session)return;const {data,error}=await flareDb.rpc('flare_inventory_metrics');if(error||!data)return;window.flareLiveMetrics=data;document.querySelectorAll('[data-flare-metric]').forEach(el=>{const k=el.dataset.flareMetric;if(data[k]!==undefined)el.textContent=Number(data[k]).toLocaleString()});document.querySelectorAll('[data-flare-health]').forEach(el=>el.textContent=data.health_pct+'%');}
 window.addEventListener('load',()=>setTimeout(loadFlareInventoryMetrics,500));
+async function flareRefreshAuthUI(){
+ if(!flareDb)return;
+ const {data:{session}}=await flareDb.auth.getSession();
+ const host=document.querySelector('#flareAuthPanel');
+ if(host) host.remove();
+ const panel=document.createElement('div');panel.id='flareAuthPanel';
+ panel.style='position:fixed;right:18px;top:70px;z-index:9999;background:#fff;border:1px solid #d9e4ee;border-radius:12px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.12);min-width:260px;font:12px Arial';
+ if(session){
+  const {data:profile}=await flareDb.from('profiles').select('full_name,role,active,approval_status').eq('id',session.user.id).maybeSingle();
+  panel.innerHTML='<b>Flare Session</b><div style="margin:7px 0">'+(profile?.full_name||session.user.email)+'<br><span style="color:#718196">'+(profile?.role||'user')+' · '+(profile?.approval_status||'profile pending')+'</span></div><button onclick="flareSignOut()">Sign Out</button>';
+ }else{
+  panel.innerHTML='<b>Sign in to Flare</b><div style="margin:8px 0"><input id="flareEmail" type="email" placeholder="CRM email" style="width:100%;box-sizing:border-box;padding:8px;margin-bottom:6px"><input id="flarePassword" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:8px"></div><button class="primary" onclick="flareSignIn()">Sign In</button><div id="flareAuthMsg" style="margin-top:7px;color:#718196"></div>';
+ }
+ document.body.appendChild(panel);
+}
+async function flareSignIn(){
+ const email=document.querySelector('#flareEmail')?.value.trim(),password=document.querySelector('#flarePassword')?.value||'',msg=document.querySelector('#flareAuthMsg');
+ if(!email||!password){if(msg)msg.textContent='Enter your CRM email and password.';return}
+ if(msg)msg.textContent='Signing in...';
+ const {data,error}=await flareDb.auth.signInWithPassword({email,password});
+ if(error){if(msg)msg.textContent=error.message;return}
+ const {data:profile}=await flareDb.from('profiles').select('role,active,approval_status').eq('id',data.user.id).maybeSingle();
+ if(!profile||!profile.active||profile.approval_status!=='approved'){
+  await flareDb.auth.signOut();if(msg)msg.textContent='Account is not approved/active for Flare.';return;
+ }
+ await flareRefreshAuthUI();await loadFlareInventoryMetrics();
+}
+async function flareSignOut(){if(flareDb)await flareDb.auth.signOut();await flareRefreshAuthUI()}
+window.addEventListener('load',()=>setTimeout(flareRefreshAuthUI,700));
